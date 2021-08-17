@@ -17,57 +17,39 @@ import glob
 import time
 import argparse
 #---------------------------------------------
+'''------------------------------------------------------------------------------------------------------------'''
 class mot:
     def __init__(self):
-        # self.depth_sub = rospy.Subscriber("/depth_estimator/depth_infoarray", depth_infoArray, self.detection_cb)
-        # publisher or srv server 
-        self.distance_threshold = 1.5 # [m]
-        self.soldier_tracker = Sort(dist_threshold=self.distance_threshold) ## 
+        self.distance_threshold = 1.2 # [m]
+        self.soldier_tracker = Sort(dist_threshold=self.distance_threshold)
         self.dog_tracker = Sort(dist_threshold=self.distance_threshold)
-        # self.mot_Array_pub = rospy.Publisher("/mot/tracks", MarkerArray, queue_size = 1)
 
     def detection_cb(self, ls_data_item):
-        # if len(ls_data_item)>0:
-        # # only soldier now.
-        #     only_soldier_indice = []
-        # for idx in range(len(ls_data_item)):
-        #     if ls_data_item[idx].yolo_label == "soldier":
-        #         only_soldier_indice.append(idx)
-        # if len(only_soldier_indice):
-        #     # print("{} soldier is detected! ".format(len(only_soldier_indice)))
-        #     dets = np.zeros((len(only_soldier_indice), 2))
-        #     for i in only_soldier_indice:
-        #         dets[i][0] = ls_data_item[i].object_global_position_2d_x
-        #         dets[i][1] = ls_data_item[i].object_global_position_2d_y
-        #     # print(dets)
-        
         only_soldier = filter(lambda item: item.yolo_label=='soldier',ls_data_item)
         only_dog = filter(lambda item: item.yolo_label=='dog',ls_data_item)
-        print("current seq id : ", ls_data_item[0].seq_tw)
+
         if len(only_soldier)!=0:
-            print("update soldier")
             self.soldier_tracker.update(only_soldier)
 
         if len(only_dog)!=0:
-            print("update dog")
             self.dog_tracker.update(only_dog)
 
     def print_result(self):
-        print("-"*10)
+        print("-"*30)
         print("the tracking result <soldier>")
-        print("-"*10)
+        print("-"*30)
         for i in range(len(self.soldier_tracker.trackers)):
-            print('{}th track'.format(i))
+            print('{}th track'.format(i+1))
             print(self.soldier_tracker.trackers[i].position)
             print('number of assigned data :', len(self.soldier_tracker.trackers[i].dets))
-        print("-"*10)
+        print("-"*30)
         print("the tracking result <dog>")
-        print("-"*10)
+        print("-"*30)
         for i in range(len(self.dog_tracker.trackers)):
             print('{}th track'.format(i+1))
             print(self.dog_tracker.trackers[i].position)
             print('number of assigned data :', len(self.dog_tracker.trackers[i].dets))
-        
+'''------------------------------------------------------------------------------------------------------------'''  
 class Sort(object):
   def __init__(self, dist_threshold=0.3, min_hits = 10):
     """
@@ -83,59 +65,48 @@ class Sort(object):
   def update(self, data):
     """
     Params:
-      dets - a numpy array of detections in the format [[x,y,score],[x,y,score],...]
-    Requires: this method must be called once for each frame even with empty detections (use np.empty((0, 5)) for frames without detections).
-    Returns the a similar array, where the last column is the object ID.
+      data - a list of detections in same sequence ID, in the format [object,object,...]
+    Requires: this method must be called once for each frame even with empty detections (use np.empty((0, 2)) for frames without detections).
     NOTE: The number of objects returned may differ from the number of detections provided.
     """
+    # Change the data type. // List --> 2D array
     dets = np.zeros((len(data), 2))
     for i in range(len(data)):
         dets[i][0] = data[i].object_global_position_2d_x
-        dets[i][1] = data[i].object_global_position_2d_y
+        dets[i][1] = data[i].object_global_position_2d_y 
 
-    self.frame_count += 1 # all data has same seq_tw number. thus choose 0 indice
+    self.frame_count += 1 # TODO: for online track deletion
 
-    # get predicted locations from existing trackers.
+    # Change the data type. // List --> 2D array
     trks = np.zeros((len(self.trackers), 2))
     for idx, tracker in enumerate(self.trackers):
-    	trks[idx] = self.trackers[idx].position # no predition
-    # print('dets', dets)
-    # print('trks', trks)
+    	trks[idx] = self.trackers[idx].position # static object, no predition
+    
     matched, unmatched_dets, unmatched_trks = associate_detections_to_trackers(np.array(dets), np.array(trks), self.dist_threshold) ##
     '''
+        IMPORTANT!
+        <The shape of return variables>
         matched : Assignment matrix,  [<trks>, <dets>] <...> is column matrix. = 2d array
         unmatched_dets : unmatched dets, [dets1, dets2, ... ] = 1d array
         unmatched_trks : unmatched trks, [trks1, trks2, ... ] = 1d array
     '''
-    # print('-'*10)
-    # print('matching result : ')
-    # print(matched)
-    # print('unmatched dets : ')
-    # print(unmatched_dets)
-    # print('unmatched tracks : ')
-    # print(unmatched_trks)
-    # print('-'*10)
-
-    # update matched trackers with assigned detections
-    # print("<"*10+"start update"+">"*10)
+    # update matched detections to tracks
     for m in matched:
-    #   print("matching : {}".format(m)) #################### m[0] / m[1] exchaged!
-    #   print(dets)
+      self.trackers[m[0]].update(data[m[1]])
 
-    #   print(dets[m[1], :])
-    #   print(self.trackers[m[0]].position)
-      self.trackers[m[0]].update(data[m[1]])#(dets[m[1], :])
     # create and initialise new trackers for unmatched detections
-    
-    # print(data)
     for i in unmatched_dets:
         trk = Tracker(data[i])
         self.trackers.append(trk)
-        print("new Track generated! current total {} tracks".format(Tracker.count))
+        if data[0].yolo_label=='soldier':
+            print("SOLDIER :: new track generated at {}! current total {} tracks".format(data[0].seq_tw, Tracker.soldier_count))
+        if data[0].yolo_label=='dog':
+            print("DOG     :: new track generated at {}! current total {} tracks".format(data[0].seq_tw, Tracker.dog_count))
+
     i = len(self.trackers)
 
     
-
+    # TODO: online track deletion
     # for trk in reversed(self.trackers):
     #     d = trk.get_state()[0]
     #     if (trk.time_since_update < 1) and (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
@@ -147,8 +118,33 @@ class Sort(object):
     # if(len(ret)>0):
     #   return np.concatenate(ret)
     # return np.empty((0,5))
+'''------------------------------------------------------------------------------------------------------------'''
+class Tracker(object):
+  soldier_count = 0
+  dog_count = 0
+  def __init__(self, data): #v dets[m[1], :] -> data[m[1]]
+    
+    self.position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y]) # [x, y]
+    if data.yolo_label == 'soldier':
+        self.id = Tracker.soldier_count
+        Tracker.soldier_count += 1
 
+    if data.yolo_label == 'dog':
+        self.id = Tracker.dog_count
+        Tracker.dog_count += 1
+
+    self.hits = 1
+    self.dets = list(data)
+  def update(self, data): # just simple moving avg
+    self.hits += 1
+    new_position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y])
+    self.position = (self.position*(self.hits-1) + new_position)/self.hits
+    self.dets.append(data)
+'''------------------------------------------------------------------------------------------------------------'''
 def linear_assignment(cost_matrix):
+  """
+  Hungarian Algorithm , DO NOT CHANGE!
+  """
   try:
     import lap
     _, x, y = lap.lapjv(cost_matrix, extend_cost=True)
@@ -161,35 +157,19 @@ def linear_assignment(cost_matrix):
 
 def get_distancemat(dets, trks):
    """
-   make distance matrix 
+   make distance matrix , DO NOT CHANGE!
    """
    dets = np.expand_dims(dets,0)
    trks = np.expand_dims(trks,1)
    distance = np.linalg.norm(dets - trks, axis = 2)
    return distance
 
-class Tracker(object):
-  count = 0
-  def __init__(self, data): #v dets[m[1], :] -> data[m[1]]
-    self.id = Tracker.count
-    self.position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y]) # [x, y]
-    Tracker.count += 1
-    self.hits = 1
-    self.dets = list(data)
-  def update(self, data): # just simple moving avg
-    self.hits += 1
-    new_position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y])
-    self.position = (self.position*(self.hits-1) + new_position)/self.hits
-    self.dets.append(data)
-
-    
 def associate_detections_to_trackers(detections,trackers,distance_threshold = 1.0):
     """
     Assigns detections to tracked object (both represented as bounding boxes)
     Returns 3 lists of matches, unmatched_detections and unmatched_trackers
     """
     if(len(trackers)==0):
-        print("There is no trackers")
         return np.zeros((0,2),dtype=int), np.arange(len(detections)), np.zeros((0,2),dtype=int)
     distance_matrix = get_distancemat(detections, trackers)
 
@@ -198,7 +178,6 @@ def associate_detections_to_trackers(detections,trackers,distance_threshold = 1.
         matched_indices = linear_assignment(distance_matrix)
     else:
         matched_indices = np.zeros((0,2))
-
 
     unmatched_detections = []
     for d, det in enumerate(detections):
@@ -225,6 +204,7 @@ def associate_detections_to_trackers(detections,trackers,distance_threshold = 1.
         matches = np.concatenate(matches,axis=0)
 
     return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
+'''------------------------------------------------------------------------------------------------------------'''
 
 def main(args):
     # read data
@@ -232,7 +212,7 @@ def main(args):
     # cut data
     data = data.drop(data.index[296:len(data)]) # use [0:295] only for dataset1 (total 1185)
 
-    # change it to list type data container
+    # Change it to list type data container
     ls_data = []
     result = []
     index = 0
@@ -247,19 +227,20 @@ def main(args):
     
     ## MOT initialization ##
     mot_tracker = mot()
-    ## pseudo topic generation and run callback
+
+    ## CORE LOOP ##
     for ls_data_item in ls_data:
         mot_tracker.detection_cb(ls_data_item)
 
 
-    # TODO: delete tracks..
-    
+    ## Offline Track deletion ##
     for idx, tracker in enumerate(mot_tracker.dog_tracker.trackers):
         if tracker.hits < mot_tracker.dog_tracker.min_hits :
             mot_tracker.dog_tracker.trackers.remove(tracker)
             print("track dead because few detections")
 
     mot_tracker.print_result()
+
     '''                   Draw (batch)           '''
     # fig = plt.figure()
     # ax = fig.add_subplot(1,1,1)
@@ -288,7 +269,7 @@ def main(args):
     #     traj_iter.set_data(drone_position_x[0:idx], drone_position_y[0:idx])
     #     obj_iter.set_data(object_global_position_2d_x[0:idx], object_global_position_2d_y[0:idx])
     #     plt.pause(0.01)
-
+    
     #############################################################################################################
 
 if __name__ == '__main__':
