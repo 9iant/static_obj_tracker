@@ -256,10 +256,14 @@ def main(args):
         if tracker.hits < mot_tracker.dog_tracker.min_hits :
             mot_tracker.dog_tracker.trackers.remove(tracker)
             print("track dead because few detections")
-    
-    mot_tracker.print_result()
+
+    #mot_tracker.print_result()
     #mot_tracker.plot_result()
-    # TODO: 
+    # TODO: we need to unify the data, many unnecessary transitions from one type to the other
+    #get best image for dog and soldier
+    best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
+    best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
+        #create data in BIS format
 
     '''                   Draw (batch)           '''
     # fig = plt.figure()
