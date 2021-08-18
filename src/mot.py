@@ -16,6 +16,7 @@ import matplotlib.patches as patches
 import glob
 import time
 import argparse
+from bis import bis
 #---------------------------------------------
 '''------------------------------------------------------------------------------------------------------------'''
 class mot:
@@ -242,6 +243,9 @@ def main(args):
     ## MOT initialization ##
     mot_tracker = mot()
 
+    ## bis initalization ##
+    best_image_selector = bis(0.5, 0.2, 0.3)
+
     ## CORE LOOP ##
     for ls_data_item in ls_data:
         mot_tracker.detection_cb(ls_data_item)
@@ -252,9 +256,9 @@ def main(args):
         if tracker.hits < mot_tracker.dog_tracker.min_hits :
             mot_tracker.dog_tracker.trackers.remove(tracker)
             print("track dead because few detections")
-
+    
     mot_tracker.print_result()
-    mot_tracker.plot_result()
+    #mot_tracker.plot_result()
     # TODO: 
 
     '''                   Draw (batch)           '''
