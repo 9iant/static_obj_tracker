@@ -42,6 +42,7 @@ class mot:
             print('{}th track'.format(i+1))
             print(self.soldier_tracker.trackers[i].position)
             print('number of assigned data :', len(self.soldier_tracker.trackers[i].dets))
+            print('number of assigned data :', self.soldier_tracker.trackers[i].dets)
         print("-"*30)
         print("the tracking result <dog>")
         print("-"*30)
@@ -49,6 +50,19 @@ class mot:
             print('{}th track'.format(i+1))
             print(self.dog_tracker.trackers[i].position)
             print('number of assigned data :', len(self.dog_tracker.trackers[i].dets))
+
+    # TODO: visualization
+    def plot_result(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        ax.set_aspect('equal', 'box')
+        ax.set(xlim = [-1.0, 11], ylim = [-1, 4], xlabel = 'x [m]', ylabel = 'y [m]')
+        for i in range(len(self.soldier_tracker.trackers)):
+            ax.plot(self.soldier_tracker.trackers[i].position[0],self.soldier_tracker.trackers[i].position[1],'bx',label='sol{}'.format(i+1))
+        for i in range(len(self.dog_tracker.trackers)):
+            ax.plot(self.dog_tracker.trackers[i].position[0],self.dog_tracker.trackers[i].position[1],'rx',label='dog{}'.format(i+1))
+        ax.legend()
+        plt.show()
 '''------------------------------------------------------------------------------------------------------------'''  
 class Sort(object):
   def __init__(self, dist_threshold=0.3, min_hits = 10):
@@ -124,7 +138,6 @@ class Tracker(object):
   dog_count = 0
   def __init__(self, data): #v dets[m[1], :] -> data[m[1]]
     
-    self.position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y]) # [x, y]
     if data.yolo_label == 'soldier':
         self.id = Tracker.soldier_count
         Tracker.soldier_count += 1
@@ -133,6 +146,7 @@ class Tracker(object):
         self.id = Tracker.dog_count
         Tracker.dog_count += 1
 
+    self.position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y]) # [x, y]
     self.hits = 1
     self.dets = list(data)
   def update(self, data): # just simple moving avg
@@ -240,6 +254,8 @@ def main(args):
             print("track dead because few detections")
 
     mot_tracker.print_result()
+    mot_tracker.plot_result()
+    # TODO: 
 
     '''                   Draw (batch)           '''
     # fig = plt.figure()
