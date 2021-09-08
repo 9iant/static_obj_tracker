@@ -16,6 +16,7 @@ class bis:
     def best_image_selector(self,data_per_track, objects_positions):
         index = 0
         best_image_list = []
+        print(len(data_per_track))
         for track in data_per_track:
             #compute distance between drone and object position
             drone_x_y = np.array([data_per_track[track]['drone_position_x'], data_per_track[track]['drone_position_y']])
@@ -28,6 +29,7 @@ class bis:
             #TODO division by zero needs to be handled
             yolo_confidence = np.array(data_per_track[track]['drone_position_x'])
             fitness = self.W_distance_drone_track*1/distance_drone_track + self.W_distance_object_track*1/distance_object_track + self.W_YOLO_confidence * yolo_confidence
+            
             best_image = np.argmax(fitness)
             print('best image for track <{0}> is <{1}>'.format(track,data_per_track[track]['seq_tw'][best_image]))
             index += 1 
@@ -35,17 +37,17 @@ class bis:
         return best_image_list
 
     def run(self, trackers, name):
-        soldier_tracks_dic = {}
+        tracks_dic = {}
         list_object_pos = []
         for idx, tracker in enumerate(trackers):
             #create tracker
-            soldier_tracks_dic[name+'_id_{0}'.format(tracker.id)] = {}
+            tracks_dic[name+'_id_{0}'.format(tracker.id)] = {}
             list_object_pos.append(tracker.position)
             #fill in the keys
             for index,value in tracker.dets[0].items():
-                soldier_tracks_dic[name+'_id_{0}'.format(tracker.id)][index] = []
+                tracks_dic[name+'_id_{0}'.format(tracker.id)][index] = []
             for i in range(0,len(tracker.dets)):
                 for index,value in tracker.dets[i].items():
-                    soldier_tracks_dic[name+'_id_{0}'.format(tracker.id)][index].append(value)
-            best_image_list = self.best_image_selector(soldier_tracks_dic,list_object_pos)
-            return best_image_list
+                    tracks_dic[name+'_id_{0}'.format(tracker.id)][index].append(value)
+        best_image_list = self.best_image_selector(tracks_dic,list_object_pos)
+        return best_image_list

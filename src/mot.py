@@ -2,7 +2,7 @@
 from __future__ import print_function
 # import roslib
 import sys
-
+import math
 #----------------for offline process---------
 import numpy as np
 import matplotlib.pyplot as plt
@@ -67,13 +67,13 @@ class mot:
         plt.show()
 '''------------------------------------------------------------------------------------------------------------'''  
 class Sort(object):
-  def __init__(self, dist_threshold=0.3, min_hits = 10):
+  def __init__(self, dist_threshold=0.8, min_hits = 5):
     """
     Sets key parameters for SORT
     """
     # self.max_age = max_age
     self.window_size = 10
-    self.min_hits = 5
+    self.min_hits = 8
     self.dist_threshold = dist_threshold
     self.trackers = [] ## important
     self.frame_count = 0
@@ -224,7 +224,7 @@ def associate_detections_to_trackers(detections,trackers,distance_threshold = 1.
 
 def main(args):
     # read data
-    data = pd.read_csv("./rec/image_server_out1.csv")
+    data = pd.read_csv("/home/tw-j120/nvme_ssd/buffer_system_data/exploration_debug_3_640/kdarpa_image_server_objects_info.csv")
     # cut data
     data = data.drop(data.index[296:len(data)]) # use [0:295] only for dataset1 (total 1185)
 
@@ -249,14 +249,20 @@ def main(args):
 
     ## CORE LOOP ##
     for ls_data_item in ls_data:
-        mot_tracker.detection_cb(ls_data_item)
+        #print(ls_data_item)
+        if not math.isnan(ls_data_item[0]['object_global_position_2d_x']):
+            mot_tracker.detection_cb(ls_data_item)
 
 
-    ## Offline Track deletion ##
+    ### Offline Track deletion ##
     for idx, tracker in enumerate(mot_tracker.dog_tracker.trackers):
         if tracker.hits < mot_tracker.dog_tracker.min_hits :
             mot_tracker.dog_tracker.trackers.remove(tracker)
-            print("track dead because few detections")
+            print("(dog) track dead because few detections")
+    for idx, tracker in enumerate(mot_tracker.soldier_tracker.trackers):
+        if tracker.hits < mot_tracker.soldier_tracker.min_hits :
+            mot_tracker.soldier_tracker.trackers.remove(tracker)
+            print("(soldier) track dead because few detections")
     
 
     #mot_tracker.print_result()
