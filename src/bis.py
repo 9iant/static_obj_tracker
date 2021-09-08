@@ -15,6 +15,7 @@ class bis:
 
     def best_image_selector(self,data_per_track, objects_positions):
         index = 0
+        best_image_list = []
         for track in data_per_track:
             #compute distance between drone and object position
             drone_x_y = np.array([data_per_track[track]['drone_position_x'], data_per_track[track]['drone_position_y']])
@@ -28,8 +29,10 @@ class bis:
             yolo_confidence = np.array(data_per_track[track]['drone_position_x'])
             fitness = self.W_distance_drone_track*1/distance_drone_track + self.W_distance_object_track*1/distance_object_track + self.W_YOLO_confidence * yolo_confidence
             best_image = np.argmax(fitness)
-            print('best image for track {0} is {1}'.format(track,data_per_track[track]['seq_tw'][best_image]))
+            print('best image for track <{0}> is <{1}>'.format(track,data_per_track[track]['seq_tw'][best_image]))
             index += 1 
+            best_image_list.append(data_per_track[track]['seq_tw'][best_image])
+        return best_image_list
 
     def run(self, trackers, name):
         soldier_tracks_dic = {}
@@ -39,9 +42,10 @@ class bis:
             soldier_tracks_dic[name+'_id_{0}'.format(tracker.id)] = {}
             list_object_pos.append(tracker.position)
             #fill in the keys
-            for index,value in tracker.dets[19].items():
+            for index,value in tracker.dets[0].items():
                 soldier_tracks_dic[name+'_id_{0}'.format(tracker.id)][index] = []
-            for i in range(18,len(tracker.dets)):
+            for i in range(0,len(tracker.dets)):
                 for index,value in tracker.dets[i].items():
                     soldier_tracks_dic[name+'_id_{0}'.format(tracker.id)][index].append(value)
-            self.best_image_selector(soldier_tracks_dic,list_object_pos)
+            best_image_list = self.best_image_selector(soldier_tracks_dic,list_object_pos)
+            return best_image_list

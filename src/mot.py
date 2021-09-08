@@ -17,7 +17,8 @@ import glob
 import time
 import argparse
 from bis import bis
-#---------------------------------------------
+#------------------for visualization---------------------
+
 '''------------------------------------------------------------------------------------------------------------'''
 class mot:
     def __init__(self):
@@ -149,7 +150,7 @@ class Tracker(object):
 
     self.position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y]) # [x, y]
     self.hits = 1
-    self.dets = list(data)
+    self.dets = list([data])
   def update(self, data): # just simple moving avg
     self.hits += 1
     new_position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y])
@@ -256,15 +257,32 @@ def main(args):
         if tracker.hits < mot_tracker.dog_tracker.min_hits :
             mot_tracker.dog_tracker.trackers.remove(tracker)
             print("track dead because few detections")
+    
 
     #mot_tracker.print_result()
     #mot_tracker.plot_result()
     # TODO: we need to unify the data, many unnecessary transitions from one type to the other
     #get best image for dog and soldier
-    best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
-    best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
-        #create data in BIS format
+    best_images_soldier = best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
+    best_images_dog = best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
+    #create data in BIS format
+    # print(best_images_dog)
+    # print(best_images_soldier)
+    # print(ls_data[0][0].seq_tw)
 
+    ''' BIS visualization'''
+    # for idx, tracker in enumerate(mot_tracker.dog_tracker.trackers):
+    #     best_image = filter(lambda x: x.seq_tw == best_images_dog[idx],tracker.dets)
+    #     print(best_image[0])
+    #     virtual_img = np.zeros((800,600),dtype = 'uint8')
+    #     virtual_img[best_image[0].yolo_xmin:best_image[0].yolo_xmax, best_image[0].yolo_ymin:best_image[0].yolo_ymax] = 255
+    #     # virtual_img[best_image[0].yolo_xmin][best_image[0].yolo_ymax] = 1
+    #     # virtual_img[best_image[0].yolo_xmax][best_image[0].yolo_ymin] = 1
+    #     # virtual_img[best_image[0].yolo_xmax][best_image[0].yolo_ymax] = 1
+    #     # fig = plt.figure()
+    #     # ax = filg
+    #     plt.imshow(virtual_img.transpose())
+    #     plt.show()
     '''                   Draw (batch)           '''
     # fig = plt.figure()
     # ax = fig.add_subplot(1,1,1)
