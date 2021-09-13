@@ -25,16 +25,21 @@ class mot:
         self.distance_threshold = 1.2 # [m]
         self.soldier_tracker = Sort(dist_threshold=self.distance_threshold)
         self.dog_tracker = Sort(dist_threshold=self.distance_threshold)
+        self.civilian_tracker = Sort(dist_threshold=self.distance_threshold)
 
     def detection_cb(self, ls_data_item):
         only_soldier = filter(lambda item: item.yolo_label=='soldier',ls_data_item)
         only_dog = filter(lambda item: item.yolo_label=='dog',ls_data_item)
+        only_civilian = filter(lambda item: item.yolo_label=='civilian',ls_data_item)
 
         if len(only_soldier)!=0:
             self.soldier_tracker.update(only_soldier)
 
         if len(only_dog)!=0:
             self.dog_tracker.update(only_dog)
+
+        if len(only_civilian)!=0:
+            self.civilian_tracker.update(only_civilian)
 
     def print_result(self):
         print("-"*30)
@@ -52,7 +57,13 @@ class mot:
             print('{}th track'.format(i+1))
             print(self.dog_tracker.trackers[i].position)
             print('number of assigned data :', len(self.dog_tracker.trackers[i].dets))
-
+        print("-"*30)
+        print("the tracking result <civilian>")
+        print("-"*30)
+        for i in range(len(self.civilian_tracker.trackers)):
+            print('{}th track'.format(i+1))
+            print(self.civilian_tracker.trackers[i].position)
+            print('number of assigned data :', len(self.civilian_tracker.trackers[i].dets))
     # TODO: visualization
     def plot_result(self):
         fig = plt.figure()
@@ -63,6 +74,8 @@ class mot:
             ax.plot(self.soldier_tracker.trackers[i].position[0],self.soldier_tracker.trackers[i].position[1],'bx',label='sol{}'.format(i+1))
         for i in range(len(self.dog_tracker.trackers)):
             ax.plot(self.dog_tracker.trackers[i].position[0],self.dog_tracker.trackers[i].position[1],'rx',label='dog{}'.format(i+1))
+        for i in range(len(self.civilian_tracker.trackers)):
+            ax.plot(self.civilian_tracker.trackers[i].position[0],self.civilian_tracker.trackers[i].position[1],'rx',label='civilian{}'.format(i+1))
         ax.legend()
         plt.show()
 '''------------------------------------------------------------------------------------------------------------'''  
@@ -118,6 +131,8 @@ class Sort(object):
             print("SOLDIER :: new track generated at {}! current total {} tracks".format(data[0].seq_tw, Tracker.soldier_count))
         if data[0].yolo_label=='dog':
             print("DOG     :: new track generated at {}! current total {} tracks".format(data[0].seq_tw, Tracker.dog_count))
+        if data[0].yolo_label=='civilian':
+            print("CIVILIAN:: new track generated at {}! current total {} tracks".format(data[0].seq_tw, Tracker.civilian_count))
 
     i = len(self.trackers)
 
@@ -138,6 +153,7 @@ class Sort(object):
 class Tracker(object):
   soldier_count = 0
   dog_count = 0
+  civilian_count = 0
   def __init__(self, data): #v dets[m[1], :] -> data[m[1]]
     
     if data.yolo_label == 'soldier':
@@ -148,6 +164,10 @@ class Tracker(object):
         self.id = Tracker.dog_count
         Tracker.dog_count += 1
 
+    if data.yolo_label == 'civilian':
+        self.id = Tracker.civilian_count
+        Tracker.civilian_count += 1
+    
     self.position = np.array([data.object_global_position_2d_x, data.object_global_position_2d_y]) # [x, y]
     self.hits = 1
     self.dets = list([data])
@@ -263,14 +283,19 @@ def main(args):
         if tracker.hits < mot_tracker.soldier_tracker.min_hits :
             mot_tracker.soldier_tracker.trackers.remove(tracker)
             print("(soldier) track dead because few detections")
+    for idx, tracker in enumerate(mot_tracker.civilian_tracker.trackers):
+        if tracker.hits < mot_tracker.civilian_tracker.min_hits :
+            mot_tracker.dog_tracker.trackers.remove(tracker)
+            print("(civilian) track dead because few detections")
     
 
     #mot_tracker.print_result()
     #mot_tracker.plot_result()
     # TODO: we need to unify the data, many unnecessary transitions from one type to the other
-    #get best image for dog and soldier
+    #get best image for dog, civilian and soldier
     best_images_soldier = best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
     best_images_dog = best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
+    best_images_civilian = best_image_selector.run(mot_tracker.civilian_tracker.trackers,'civilian')
     #create data in BIS format
     # print(best_images_dog)
     # print(best_images_soldier)
