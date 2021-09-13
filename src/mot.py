@@ -3,6 +3,7 @@ from __future__ import print_function
 # import roslib
 import sys
 import math
+import datetime
 #----------------for offline process---------
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +19,7 @@ import time
 import argparse
 from bis import bis
 #------------------for visualization---------------------
+import cv2 # for drawing
 
 '''------------------------------------------------------------------------------------------------------------'''
 class mot:
@@ -241,11 +243,73 @@ def associate_detections_to_trackers(detections,trackers,distance_threshold = 1.
 
     return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
 '''------------------------------------------------------------------------------------------------------------'''
+'''  Functions for final output  '''
+# # TODO : save our result 
+def save_result(data,whichlabel ,best_images_list, positions, file_path):
+    # read the image we choose
+    # save image with bounding box
+    if whichlabel == "soldier":
+        color = (0,0,255)
+    elif whichlabel == "civilian":
+        color = (0,255,0)
+    else:
+        color = (255,0,0)
+    # make output folder if it does not exist 
+    if not os.path.exists(file_path+"/output"):
+        os.makedirs(file_path+"/output")
+    cnt = 0
+    result_text = ""
+    for i, seq_tw in enumerate(best_images_list):
+        information = data.loc[data["seq_tw"] == seq_tw]
+        # print(len(information))
+        for j in range(len(information)):
+            if information["yolo_label"].values[j] == whichlabel:
+                index = j
+        image = cv2.imread(file_path + "/" + str(seq_tw) + ".jpg")
+    
+        
+        label = information["yolo_label"].values[index]
+        yolo_xmin = information["yolo_xmin"].values[index]
+        yolo_xmax = information["yolo_xmax"].values[index]
+        yolo_ymin = information["yolo_ymin"].values[index]
+        yolo_ymax = information["yolo_ymax"].values[index]
+        time_stamp = information["stamp"].values[index]
+        datetimeobj = datetime.datetime.fromtimestamp(time_stamp)
 
+        real_time = datetimeobj.strftime("%m/%d/%Y, %H:%M:%S")
+
+
+        # print(label, yolo_xmin, yolo_xmax)
+        cv2.rectangle(image,(yolo_xmin, yolo_ymin), (yolo_xmax, yolo_ymax), color, 2)
+        cv2.putText(image, label, (yolo_xmin,yolo_ymin-10), 2, 1.2, color)
+        cv2.putText(image, real_time, (int(image.shape[1]/2), image.shape[0]-30), 1 , 1.2, (255,255,255))
+        
+        # print("images are saved for "+whichlabel+ " label ")
+        # cv2.imshow("test", image)
+        # cv2.waitKey(10)
+        # print(positions[i][0], positions[i][0])
+        cv2.imwrite(file_path + "/output/" + label + str(cnt) + ".jpg", image)
+        with open(file_path + "/output/" + label + str(cnt) + ".txt" , "w") as file:
+            file.write(label+str(cnt)+ " is at (x, y) = (" +str(positions[i][0]) + ", "+str(positions[i][1])+")\n")
+            result_text+=label+str(cnt)+ " is at (x, y) = (" +str(positions[i][0]) + ", "+str(positions[i][1])+")\n"
+        
+        cnt += 1
+    with open(file_path + "/output/"+ whichlabel+" result.txt","w") as file:
+        file.write(result_text)
+
+
+
+    
 def main(args):
+    # !
+    input_path = "/home/asl/buffer_system_data/exploration_debug_3_640"
+    input_csv_file = "/kdarpa_image_server_objects_info.csv"
+    output_path = "/home/asl/buffer_system_data/exploration_debug_3_640/output"
+    output_text_file_name = "output.txt"
     # read data
-    data = pd.read_csv("/home/tw-j120/nvme_ssd/buffer_system_data/exploration_debug_3_640/kdarpa_image_server_objects_info.csv")
+    data = pd.read_csv(input_path+input_csv_file)
     # cut data
+    # ! remove this code when you do real test !
     data = data.drop(data.index[296:len(data)]) # use [0:295] only for dataset1 (total 1185)
 
     # Change it to list type data container
@@ -285,7 +349,7 @@ def main(args):
             print("(soldier) track dead because few detections")
     for idx, tracker in enumerate(mot_tracker.civilian_tracker.trackers):
         if tracker.hits < mot_tracker.civilian_tracker.min_hits :
-            mot_tracker.dog_tracker.trackers.remove(tracker)
+            mot_tracker.civilian_tracker.trackers.remove(tracker)
             print("(civilian) track dead because few detections")
     
 
@@ -293,12 +357,18 @@ def main(args):
     #mot_tracker.plot_result()
     # TODO: we need to unify the data, many unnecessary transitions from one type to the other
     #get best image for dog, civilian and soldier
-    best_images_soldier = best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
-    best_images_dog = best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
-    best_images_civilian = best_image_selector.run(mot_tracker.civilian_tracker.trackers,'civilian')
-    #create data in BIS format
+    best_images_soldier, soldier_position = best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
+    best_images_dog, dog_position = best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
+    best_images_civilian, civilian_position = best_image_selector.run(mot_tracker.civilian_tracker.trackers,'civilian')
+    
+    save_result(data, "soldier", best_images_soldier,soldier_position, input_path)
+    save_result(data, "dog" , best_images_dog,dog_position, input_path)
+    save_result(data, "civilian", best_images_civilian,civilian_position , input_path)
+ 
+    
+        
+    # create data in BIS format
     # print(best_images_dog)
-    # print(best_images_soldier)
     # print(ls_data[0][0].seq_tw)
 
     ''' BIS visualization'''

@@ -16,6 +16,7 @@ class bis:
     def best_image_selector(self,data_per_track, objects_positions):
         index = 0
         best_image_list = []
+        object_position_list = []
         print(len(data_per_track))
         for track in data_per_track:
             #compute distance between drone and object position
@@ -34,7 +35,8 @@ class bis:
             print('best image for track <{0}> is <{1}>'.format(track,data_per_track[track]['seq_tw'][best_image]))
             index += 1 
             best_image_list.append(data_per_track[track]['seq_tw'][best_image])
-        return best_image_list
+            object_position_list.append(track_x_y)
+        return best_image_list, object_position_list
 
     def run(self, trackers, name):
         tracks_dic = {}
@@ -49,5 +51,5 @@ class bis:
             for i in range(0,len(tracker.dets)):
                 for index,value in tracker.dets[i].items():
                     tracks_dic[name+'_id_{0}'.format(tracker.id)][index].append(value)
-        best_image_list = self.best_image_selector(tracks_dic,list_object_pos)
-        return best_image_list
+        best_image_list, object_position_list = self.best_image_selector(tracks_dic,list_object_pos)
+        return best_image_list, object_position_list
