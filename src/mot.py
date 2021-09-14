@@ -261,7 +261,7 @@ def save_result(data,whichlabel ,best_images_list, positions, file_path):
     result_text = ""
     for i, seq_tw in enumerate(best_images_list):
         information = data.loc[data["seq_tw"] == seq_tw]
-        # print(len(information))
+        # To distinguish which label in single image
         for j in range(len(information)):
             if information["yolo_label"].values[j] == whichlabel:
                 index = j
@@ -302,10 +302,10 @@ def save_result(data,whichlabel ,best_images_list, positions, file_path):
     
 def main(args):
     # !
-    input_path = "/home/asl/buffer_system_data/exploration_debug_3_640"
+    input_path = "/home/asl/buffer_system_data/offboard_position_long_dist2"
     input_csv_file = "/kdarpa_image_server_objects_info.csv"
-    output_path = "/home/asl/buffer_system_data/exploration_debug_3_640/output"
-    output_text_file_name = "output.txt"
+    # output_path = "/home/asl/buffer_system_data/exploration_debug_3_640/output"
+    # output_text_file_name = "output.txt"
     # read data
     data = pd.read_csv(input_path+input_csv_file)
     # cut data
