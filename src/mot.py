@@ -245,7 +245,7 @@ def associate_detections_to_trackers(detections,trackers,distance_threshold = 1.
 '''------------------------------------------------------------------------------------------------------------'''
 '''  Functions for final output  '''
 # # TODO : save our result 
-def save_result(data,whichlabel ,best_images_list, positions, file_path):
+def save_result(data,whichlabel ,best_images_list, positions, bbox_list ,file_path):
     # read the image we choose
     # save image with bounding box
     if whichlabel == "soldier":
@@ -269,10 +269,14 @@ def save_result(data,whichlabel ,best_images_list, positions, file_path):
     
         
         label = information["yolo_label"].values[index]
-        yolo_xmin = information["yolo_xmin"].values[index]
-        yolo_xmax = information["yolo_xmax"].values[index]
-        yolo_ymin = information["yolo_ymin"].values[index]
-        yolo_ymax = information["yolo_ymax"].values[index]
+        yolo_xmin = bbox_list[i][0]
+        yolo_xmax = bbox_list[i][1]
+        yolo_ymin = bbox_list[i][2]
+        yolo_ymax = bbox_list[i][3]
+        #  = information["yolo_xmin"].values[index]
+        #  = information["yolo_xmax"].values[index]
+        #  = information["yolo_ymin"].values[index]
+        #  = information["yolo_ymax"].values[index]
         time_stamp = information["stamp"].values[index]
         datetimeobj = datetime.datetime.fromtimestamp(time_stamp)
 
@@ -302,7 +306,7 @@ def save_result(data,whichlabel ,best_images_list, positions, file_path):
     
 def main(args):
     # !
-    input_path = "/home/asl/buffer_system_data/offboard_position_long_dist2"
+    input_path = "/home/asl/buffer_system_data/offboard_position_long_dist"
     input_csv_file = "/kdarpa_image_server_objects_info.csv"
     # output_path = "/home/asl/buffer_system_data/exploration_debug_3_640/output"
     # output_text_file_name = "output.txt"
@@ -357,13 +361,13 @@ def main(args):
     #mot_tracker.plot_result()
     # TODO: we need to unify the data, many unnecessary transitions from one type to the other
     #get best image for dog, civilian and soldier
-    best_images_soldier, soldier_position = best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
-    best_images_dog, dog_position = best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
-    best_images_civilian, civilian_position = best_image_selector.run(mot_tracker.civilian_tracker.trackers,'civilian')
+    best_images_soldier, soldier_position, soldier_bbox_list = best_image_selector.run(mot_tracker.soldier_tracker.trackers,'soldier')
+    best_images_dog, dog_position, dog_bbox_list = best_image_selector.run(mot_tracker.dog_tracker.trackers,'dog')
+    best_images_civilian, civilian_position, civilian_bbox_list = best_image_selector.run(mot_tracker.civilian_tracker.trackers,'civilian')
     
-    save_result(data, "soldier", best_images_soldier,soldier_position, input_path)
-    save_result(data, "dog" , best_images_dog,dog_position, input_path)
-    save_result(data, "civilian", best_images_civilian,civilian_position , input_path)
+    save_result(data, "soldier", best_images_soldier,soldier_position, soldier_bbox_list, input_path)
+    save_result(data, "dog" , best_images_dog,dog_position, dog_bbox_list, input_path)
+    save_result(data, "civilian", best_images_civilian,civilian_position, civilian_bbox_list, input_path)
  
     
         
