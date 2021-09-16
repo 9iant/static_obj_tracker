@@ -305,7 +305,7 @@ def save_result(data,whichlabel ,best_images_list, positions, bbox_list ,file_pa
 
     
 def main(args):
-    # !
+    # !!
     input_path = "/home/asl/buffer_system_data/offboard_position_long_dist"
     input_csv_file = "/kdarpa_image_server_objects_info.csv"
     # output_path = "/home/asl/buffer_system_data/exploration_debug_3_640/output"
@@ -313,8 +313,8 @@ def main(args):
     # read data
     data = pd.read_csv(input_path+input_csv_file)
     # cut data
-    # ! remove this code when you do real test !
-    data = data.drop(data.index[296:len(data)]) # use [0:295] only for dataset1 (total 1185)
+    # !! remove this code when you do real test !
+    # data = data.drop(data.index[296:len(data)]) # use [0:295] only for dataset1 (total 1185)
 
     # Change it to list type data container
     ls_data = []
